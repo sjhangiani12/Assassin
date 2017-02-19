@@ -1,0 +1,5 @@
+/*hostname*/'localhost'
+/*username*/'id854024_assassin'
+/*password*/'codeclub'
+/*database name*/'id854024_studentdirectory'
+/*table name*/'Students'
