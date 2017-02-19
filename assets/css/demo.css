@@ -1,0 +1,22 @@
+.phone, .tablet { color: gray;}
+.desktop{ color: green; }
+
+
+/* Landscape phone to portrait tablet */
+@media (max-width: 767px) {
+    .phone{ color: green; }
+    .tablet, .desktop { color: gray;}
+}
+
+/* Portrait tablet to landscape and desktop */
+@media (min-width: 768px) and (max-width: 979px) {
+    .tablet{ color: green; }
+    .phone, .desktop { color: gray;}
+}
+
+/* Large desktop */
+@media (min-width: 1200px) {
+    .desktop{ color: green; }
+    .tablet, .phone { color: gray;}
+}
+
