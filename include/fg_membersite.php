@@ -38,8 +38,8 @@ class FGMembersite
     //-----Initialization -------
     function FGMembersite()
     {
-        $this->sitename = 'kunaals.github.io/SeniorAssassin';
-        $this->rand_key = 'HI1brsLTvwulQfO';
+        $this->sitename = 'ihsassassin.netii.net';
+        $this->rand_key = 'qSRcVS6DrTzrPvr';
     }
 
     function InitDB($host,$uname,$pwd,$database,$tablename)
@@ -268,10 +268,7 @@ class FGMembersite
 
         $pwd = trim($_POST['oldpwd']);
 
-    	$salt = $user_rec['salt'];
-        $hash = $this->checkhashSSHA($salt, $pwd);
-
-        if($user_rec['password'] != $hash)
+        if($user_rec['password'] != md5($pwd))
         {
             $this->HandleError("The old password does not match!");
             return false;
@@ -360,44 +357,24 @@ class FGMembersite
             return false;
         }
         $username = $this->SanitizeForSQL($username);
+        $pwdmd5 = md5($password);
+        $qry = "Select name, email from $this->tablename where username='$username' and password='$pwdmd5' and confirmcode='y'";
 
-  	$nresult = mysql_query("SELECT * FROM $this->tablename WHERE username = '$username'", $this->connection) or die(mysql_error());
-        // check for result
-        $no_of_rows = mysql_num_rows($nresult);
-        if ($no_of_rows > 0) {
-            $nresult = mysql_fetch_array($nresult);
-            $salt = $nresult['salt'];
-            $encrypted_password = $nresult['password'];
-            $hash = $this->checkhashSSHA($salt, $password);
+        $result = mysqli_query($this->connection, $qry);
 
-
-        }
-
-
-        $qry = "Select name, email from $this->tablename where username='$username' and password='$hash' and confirmcode='y'";
-
-        $result = mysql_query($qry,$this->connection);
-
-        if(!$result || mysql_num_rows($result) <= 0)
+        if(!$result || mysqli_num_rows($result) <= 0)
         {
             $this->HandleError("Error logging in. The username or password does not match");
             return false;
         }
 
-        $row = mysql_fetch_assoc($result);
+        $row = mysqli_fetch_assoc($result);
 
 
         $_SESSION['name_of_user']  = $row['name'];
         $_SESSION['email_of_user'] = $row['email'];
 
         return true;
-    }
-
- public function checkhashSSHA($salt, $password) {
-
-        $hash = base64_encode(sha1($password . $salt, true) . $salt);
-
-        return $hash;
     }
 
     function UpdateDBRecForConfirmation(&$user_rec)
@@ -409,19 +386,19 @@ class FGMembersite
         }
         $confirmcode = $this->SanitizeForSQL($_GET['code']);
 
-        $result = mysql_query("Select name, email from $this->tablename where confirmcode='$confirmcode'",$this->connection);
-        if(!$result || mysql_num_rows($result) <= 0)
+        $result = mysqli_query($this->connection, "Select name, email from $this->tablename where confirmcode='$confirmcode'");
+        if(!$result || mysqli_num_rows($result) <= 0)
         {
             $this->HandleError("Wrong confirm code.");
             return false;
         }
-        $row = mysql_fetch_assoc($result);
+        $row = mysqli_fetch_assoc($result);
         $user_rec['name'] = $row['name'];
         $user_rec['email']= $row['email'];
 
         $qry = "Update $this->tablename Set confirmcode='y' Where  confirmcode='$confirmcode'";
 
-        if(!mysql_query( $qry ,$this->connection))
+        if(!mysqli_query($this->connection, $qry))
         {
             $this->HandleDBError("Error inserting data to the table\nquery:$qry");
             return false;
@@ -444,15 +421,9 @@ class FGMembersite
     {
         $newpwd = $this->SanitizeForSQL($newpwd);
 
-        $hash = $this->hashSSHA($newpwd);
+        $qry = "Update $this->tablename Set password='".md5($newpwd)."' Where  id_user=".$user_rec['id_user']."";
 
-	$new_password = $hash["encrypted"];
-
-	$salt = $hash["salt"];
-
-        $qry = "Update $this->tablename Set password='".$new_password."', salt='".$salt."' Where  id_user=".$user_rec['id_user']."";
-
-        if(!mysql_query( $qry ,$this->connection))
+        if(!mysqli_query($this->connection, $qry))
         {
             $this->HandleDBError("Error updating the password \nquery:$qry");
             return false;
@@ -469,14 +440,14 @@ class FGMembersite
         }
         $email = $this->SanitizeForSQL($email);
 
-        $result = mysql_query("Select * from $this->tablename where email='$email'",$this->connection);
+        $result = mysqli_query($this->connection, "Select * from $this->tablename where email='$email'");
 
-        if(!$result || mysql_num_rows($result) <= 0)
+        if(!$result || mysqli_num_rows($result) <= 0)
         {
             $this->HandleError("There is no user with email: $email");
             return false;
         }
-        $user_rec = mysql_fetch_assoc($result);
+        $user_rec = mysqli_fetch_assoc($result);
 
 
         return true;
@@ -621,7 +592,7 @@ class FGMembersite
         $validator->addValidation("name","req","Please fill in Name");
         $validator->addValidation("email","email","The input for Email should be a valid email value");
         $validator->addValidation("email","req","Please fill in Email");
-
+        $validator->addValidation("username","req","Please fill in UserName");
         $validator->addValidation("password","req","Please fill in Password");
 
 
@@ -642,10 +613,9 @@ class FGMembersite
     function CollectRegistrationSubmission(&$formvars)
     {
         $formvars['name'] = $this->Sanitize($_POST['name']);
-	$formvars['username'] = $this->Sanitize($_POST['username']);
         $formvars['email'] = $this->Sanitize($_POST['email']);
+        $formvars['username'] = $this->Sanitize($_POST['username']);
         $formvars['password'] = $this->Sanitize($_POST['password']);
-
     }
 
     function SendUserConfirmationEmail(&$formvars)
@@ -683,16 +653,7 @@ class FGMembersite
     function GetAbsoluteURLFolder()
     {
         $scriptFolder = (isset($_SERVER['HTTPS']) && ($_SERVER['HTTPS'] == 'on')) ? 'https://' : 'http://';
-
-        $urldir ='';
-        $pos = strrpos($_SERVER['REQUEST_URI'],'/');
-        if(false !==$pos)
-        {
-            $urldir = substr($_SERVER['REQUEST_URI'],0,$pos);
-        }
-
-        $scriptFolder .= $_SERVER['HTTP_HOST'].$urldir;
-
+        $scriptFolder .= $_SERVER['HTTP_HOST'] . dirname($_SERVER['REQUEST_URI']);
         return $scriptFolder;
     }
 
@@ -741,12 +702,11 @@ class FGMembersite
             return false;
         }
 
-	if(!$this->IsFieldUnique($formvars,'username'))
+        if(!$this->IsFieldUnique($formvars,'username'))
         {
             $this->HandleError("This UserName is already used. Please try another username");
             return false;
         }
-
         if(!$this->InsertIntoDB($formvars))
         {
             $this->HandleError("Inserting to Database failed!");
@@ -759,8 +719,8 @@ class FGMembersite
     {
         $field_val = $this->SanitizeForSQL($formvars[$fieldname]);
         $qry = "select username from $this->tablename where $fieldname='".$field_val."'";
-        $result = mysql_query($qry,$this->connection);
-        if($result && mysql_num_rows($result) > 0)
+        $result = mysqli_query($this->connection, $qry);
+        if($result && mysqli_num_rows($result) > 0)
         {
             return false;
         }
@@ -770,19 +730,19 @@ class FGMembersite
     function DBLogin()
     {
 
-        $this->connection = mysql_connect($this->db_host,$this->username,$this->pwd);
+        $this->connection = mysqli_connect($this->db_host,$this->username,$this->pwd);
 
         if(!$this->connection)
         {
             $this->HandleDBError("Database Login failed! Please make sure that the DB login credentials provided are correct");
             return false;
         }
-        if(!mysql_select_db($this->database, $this->connection))
+        if(!mysqli_select_db($this->connection, $this->database))
         {
             $this->HandleDBError('Failed to select database: '.$this->database.' Please make sure that the database name provided is correct');
             return false;
         }
-        if(!mysql_query("SET NAMES 'UTF8'",$this->connection))
+        if(!mysqli_query($this->connection, "SET NAMES 'UTF8'"))
         {
             $this->HandleDBError('Error setting utf8 encoding');
             return false;
@@ -792,8 +752,8 @@ class FGMembersite
 
     function Ensuretable()
     {
-        $result = mysql_query("SHOW COLUMNS FROM $this->tablename");
-        if(!$result || mysql_num_rows($result) <= 0)
+        $result = mysqli_query($this->connection, "SHOW COLUMNS FROM $this->tablename");
+        if(!$result || mysqli_num_rows($result) <= 0)
         {
             return $this->CreateTable();
         }
@@ -802,21 +762,18 @@ class FGMembersite
 
     function CreateTable()
     {
+        $qry = "Create Table $this->tablename (
+                id_user INT NOT NULL AUTO_INCREMENT ,
+                name VARCHAR( 128 ) NOT NULL ,
+                email VARCHAR( 64 ) NOT NULL ,
+                phone_number VARCHAR( 16 ) NOT NULL ,
+                username VARCHAR( 16 ) NOT NULL ,
+                password VARCHAR( 32 ) NOT NULL ,
+                confirmcode VARCHAR(32) ,
+                PRIMARY KEY ( id_user )
+                )";
 
-    	$qry = "Create Table $this->tablename (".
-                "id_user INT NOT NULL AUTO_INCREMENT ,".
-                "name VARCHAR( 128 ) NOT NULL ,".
-                "email VARCHAR( 64 ) NOT NULL ,".
-                "phone_number VARCHAR( 16 ) NOT NULL ,".
-                "username VARCHAR( 16 ) NOT NULL ,".
-		"salt VARCHAR( 50 ) NOT NULL ,".
-                "password VARCHAR( 80 ) NOT NULL ,".
-                "confirmcode VARCHAR(32) ,".
-                "PRIMARY KEY ( id_user )".
-                ")";
-
-
-        if(!mysql_query($qry,$this->connection))
+        if(!mysqli_query($this->connection, $qry))
         {
             $this->HandleDBError("Error creating the table \nquery was\n $qry");
             return false;
@@ -831,50 +788,27 @@ class FGMembersite
 
         $formvars['confirmcode'] = $confirmcode;
 
-	$hash = $this->hashSSHA($formvars['password']);
-
-	$encrypted_password = $hash["encrypted"];
-
-
-
-	$salt = $hash["salt"];
-
-
-
-
         $insert_query = 'insert into '.$this->tablename.'(
-		name,
-		email,
-		username,
-		password,
-		salt,
-		confirmcode
-		)
-		values
-		(
-		"' . $this->SanitizeForSQL($formvars['name']) . '",
-		"' . $this->SanitizeForSQL($formvars['email']) . '",
-		"' . $this->SanitizeForSQL($formvars['username']) . '",
-		"' . $encrypted_password . '",
-		"' . $salt . '",
-		"' . $confirmcode . '"
-		)';
-
-
-        if(!mysql_query( $insert_query ,$this->connection))
+                name,
+                email,
+                username,
+                password,
+                confirmcode
+                )
+                values
+                (
+                "' . $this->SanitizeForSQL($formvars['name']) . '",
+                "' . $this->SanitizeForSQL($formvars['email']) . '",
+                "' . $this->SanitizeForSQL($formvars['username']) . '",
+                "' . md5($formvars['password']) . '",
+                "' . $confirmcode . '"
+                )';
+        if(!mysqli_query($this->connection, $insert_query))
         {
             $this->HandleDBError("Error inserting data to the table\nquery:$insert_query");
             return false;
         }
         return true;
-    }
-    function hashSSHA($password) {
-
-        $salt = sha1(rand());
-        $salt = substr($salt, 0, 10);
-        $encrypted = base64_encode(sha1($password . $salt, true) . $salt);
-        $hash = array("salt" => $salt, "encrypted" => $encrypted);
-        return $hash;
     }
     function MakeConfirmationMd5($email)
     {
