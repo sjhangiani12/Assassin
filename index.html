@@ -23,38 +23,25 @@
 		
 	</head>
 
-	<body id="page-top" data-spy="scroll" data-target".navbar-fixed-top">
+	<body>
 	
-		<!-- Navigation -->
-		
-			<!-- Navigation -->
-	<nav class="navbar navbar-custom navbar-fixed-top" role="navigation">
-		<div class="container">
-			<div class="navbar-header">
-				<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-main-collapse">
-					Menu <i class="fa fa-bars"></i>
-				</button>
-			</div>
-
-			<!-- Collect the nav links, forms, and other content for toggling -->
-			<div class="collapse navbar-collapse navbar-right navbar-main-collapse">
-				<ul class="nav navbar-nav">
-					<li>
-						<a class="page-scroll" href="register.php">Register</a>
-					</li>
-					<li>
-						<a class="page-scroll" href="confirmreg.php">Confirm Registeration</a>
-					</li>
-					<li>
-						<a class="page-scroll" href="login.php">Login</a>
-					</li>
-				</ul>
-			</div>
-			<!-- /.navbar-collapse -->
+		<div class="topnav" id="mainTopnav">
+			<a href="index.html">Home</a>
+			<a href="register.php">Register</a>
+			<a href="login.php">Login</a>
+			<a href="javascript:void(0);" class="icon" onclick="navToggle()">&#9776;</a>
 		</div>
-		<!-- /.container -->
-	</nav>
-	
+		
+		<script>
+			function navToggle() {
+				var x = document.getElementById("mainTopnav") {
+				if (x.className === "topnav") {
+					x.className += " responsive";
+				} else {
+					x.className = "topnav";
+				}
+			}
+		</script>		
 	</body>
 	
 </html>
